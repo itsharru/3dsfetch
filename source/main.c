@@ -1,131 +1,188 @@
-// This code is licensed under the MIT Open Source License.
 
-// Copyright (c) 2015 Ruairidh Carmichael - ruairidhcarmichael@live.co.uk
-
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
+#include <3ds.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <3ds.h>
-#include "util.h"
-#include "ini.h"
+#include <malloc.h>
 
-// Config //
+const char * getRegion()
+{
+    const char *regions[] = 
+	{
+        "JPN",
+        "USA",
+        "EUR",
+        "AUS",
+        "CHN",
+        "KOR",
+        "TWN",
+        "Unknown"
+    };
 
-#define TEXT_COLOR COLOR_RED
+    u8 region = 0;
+    CFGU_SecureInfoGetRegion(&region);
 
-///////////
+    if (region < 7)
+        return regions[region];
+    else
+        return regions[7];
+}
 
+u32 titleCount(FS_MediaType mediaType)
+{
+	u32 count = 0;
+	
+	AM_GetTitleCount(mediaType, &count);
+
+    return count;
+}
+
+/* credit to https://github.com/videah or wherever they got the ascii art from */
 char const *asciiart = 
 "\n\n\n\n\n\n"
-"       ######\n"
-"     ####  ####\n"
-"    #####  #####\n"
-"   ## ##    ## ##\n"
-"   ##          ##\n"
-"  ####        ####\n"
-"  ####  ####  ####\n"
-"  #### ###### ####\n"
-"  #### ###### ####\n"
-"  ###  ######  ###\n"
-"  #     ####     #\n"
-"  #  ##########  #\n"
-"  ####  #  #  ####\n"
-"   ##   #  #   ## \n"
-"    #          #\n"
-"    ##        ##\n"
-"     ##########\n";
+"                 ######\n"
+"               ####  ####\n"
+"              #####  #####\n"
+"             ## ##    ## ##\n"
+"             ##          ##\n"
+"            ####        ####\n"
+"            ####  ####  ####\n"
+"            #### ###### ####\n"
+"            #### ###### ####\n"
+"            ###  ######  ###\n"
+"            #     ####     #\n"
+"            #  ##########  #\n"
+"            ####  #  #  ####\n"
+"             ##   #  #   ## \n"
+"              #          #\n"
+"              ##        ##\n"
+"               ##########\n";
 
-void printPos(char* string, int x, int y) {
+char const *specs[5][6] = {"O3DS", "O3DS XL", "N3DS", "2DS", "N3DS XL", "Unknown",
+							"3.53in @ 800x240px", "4.88in @ 800x240px", "3.88in @ 800x240px", "3.53in @ 800x240px", "4.88in @ 800x240px", "Unknown",
+							"3.00in @ 320x240px", "4.18in @ 320x240px", "3.33in @ 320x240px", "3.00in @ 320x240px", "4.18in @ 320x240px", "Unknown",
+							"ARM11 2x MPCore 268MHz", "ARM11 2x MPCore 268MHz", "ARM11 4x MPCore 804MHz","ARM11 2x MPCore 268MHz",  "ARM11 4x MPCore 804MHz", "Unknown",
+							"128MB", "128MB","256MB", "128MB", "256MB", "Unknown"};
 
-	printf("%c[%d;%df",0x1B,y,x);
-
-	printf(string);
-
-	return 0;
-
-}
-
-void printLine(char* string1, char* string2, int x, int y) {
-
-	printf(TEXT_COLOR); printPos(string1, x, y); printf(COLOR_CLEAR); printf(string2);
-
-	return 0;
-
-}
-
-int main() {
-
-	ini_t *config = ini_load("config.ini");
-
-	const char *username =		ini_get(config, "config", "username");
-	const char *hostname =		ini_get(config, "config", "hostname");
-	const char *os =			ini_get(config, "config", "os");
-	const char *firmware =		ini_get(config, "config", "firmware");
-	const char *packages =		ini_get(config, "config", "packages");
-	const char *shell = 		ini_get(config, "config", "shell");
-	const char *resolution =	ini_get(config, "config", "resolution");
-	const char *cpu =			ini_get(config, "config", "cpu");
-	const char *memory =		ini_get(config, "config", "memory");
-	const char *gpu =			ini_get(config, "config", "gpu");
-
+int main(int argc, char **argv)
+{
 	gfxInitDefault();
-
-	consoleInit(GFX_TOP, NULL); // Initialize console on top screen.
-
-	int x = 20;
-
-	printf(asciiart, 0, 0);
-
-	while (aptMainLoop()) {
-
-		hidScanInput(); // Scan for inputs
-
-		u32 kDown = hidKeysDown(); // Get keys that are down
-
-		if (kDown & KEY_START) break; // Break and return to the Homebrew Menu
-
-		printLine(username, hostname, x, 6); // username@hostname
-
-		printLine("OS: ", os, x, 8); // Don't have a better name for this
-
-		printLine("Firmware: ", firmware, x, 10); // Detect it somehow?
-
-		printLine("Packages: ", packages, x, 12); // Maybe get number of homebrew somehow?
-
-		printLine("Shell: ", shell, x, 14); // 3DS can't really have a shell but whatever
-
-		printLine("Resolution: ", resolution, x, 16); // Needs changed for 2DS
-
-		printLine("CPU: ", cpu, x, 18); // This also needs changed for 2DS
-
-		printLine("Memory: ", memory, x, 20); // Maybe get RAM usage somehow?
-
-		printLine("GPU: ", gpu, x, 22);
-
-	}
-
-	gfxExit();
-
-	ini_free(config);
+	cfguInit();
+	amInit();
+	fsInit();
 	
-	return 0;
+	PrintConsole topScreen, bottomScreen;
+	consoleInit(GFX_TOP, &topScreen);
+	consoleInit(GFX_BOTTOM, &bottomScreen);
+	
+	bool didit = false;
+	consoleSelect(&topScreen);
+	printf("\x1b[14;16HPress A to start.\n\x1b[16;15H(Max 20 characters)");
 
+
+	while (aptMainLoop())
+	{
+		hidScanInput();
+
+		u32 kDown = hidKeysDown();
+
+		if (kDown & KEY_START) break;
+		
+		static SwkbdState swkbd;
+		static char mybuf[21];
+		SwkbdButton button = SWKBD_BUTTON_NONE;
+	
+		if (kDown & KEY_A && !didit)
+		{
+		consoleInit(GFX_TOP, &topScreen);
+		swkbdInit(&swkbd, SWKBD_TYPE_WESTERN, 1, -1);
+		swkbdSetValidation(&swkbd, SWKBD_NOTEMPTY_NOTBLANK, SWKBD_FILTER_BACKSLASH, 1);
+		swkbdSetHintText(&swkbd, "Please type in a username");
+		button = swkbdInputText(&swkbd, mybuf, sizeof(mybuf));
+		didit = true;
+		}
+	
+		if (button != SWKBD_BUTTON_NONE && didit) 
+		{
+			/* variables */
+			u32 os_ver = osGetKernelVersion();
+			/* Thanks @joel16 for some of these functions */
+			char *str_ver = (char *)malloc(sizeof(char) * 255), *str_sysver = (char *)malloc(sizeof(char) * 255);
+			OS_VersionBin *nver = (OS_VersionBin *)malloc(sizeof(OS_VersionBin)), *cver = (OS_VersionBin *)malloc(sizeof(OS_VersionBin));
+			s32 ret;
+			memset(nver, 0, sizeof(OS_VersionBin));
+			memset(cver, 0, sizeof(OS_VersionBin));
+			ret = osGetSystemVersionData(nver, cver);
+			u8 model = 0;
+			CFGU_GetSystemModel(&model);
+			u32 installedTitles = titleCount(MEDIATYPE_SD);
+			FS_ArchiveResource	resource = {0};
+			
+			
+			/* Does it count as code if it looks like pain */
+			consoleSelect(&bottomScreen);
+			printf("\x1b[0;11H%s", asciiart);
+			
+			consoleSelect(&topScreen);
+			printf("\x1b[3;8H%s@3ds", mybuf);
+			printf("\x1b[5;8H\x1b[34mModel: \x1b[0m%s - %s", specs[0][model], getRegion());
+
+			if (ret)
+				printf("\x1b[33;1m*\x1b[0m osGetSystemVersionData returned 0x%08liX\n\n", ret);
+
+			snprintf(str_sysver, 100, "\x1b[7;8H\x1b[34mSystem Version: \x1b[0m%d.%d.%d-%d",
+					cver->mainver,
+					cver->minor,
+					cver->build,
+					nver->mainver
+					);
+
+			if (!ret) printf(str_sysver);
+			
+			snprintf(str_ver, 255, "\x1b[9;8H\x1b[34mKernel version: \x1b[0m%lu.%lu-%lu",
+			GET_VERSION_MAJOR(os_ver),
+			GET_VERSION_MINOR(os_ver),
+			GET_VERSION_REVISION(os_ver)
+			);
+
+			printf(str_ver);
+
+			printf("\x1b[11;8H\x1b[34mPackages: \x1b[0m%i", (int)installedTitles);
+			
+			printf("\x1b[13;8H\x1b[34mUpper Screen: \x1b[0m%s", specs[1][model]);
+			printf("\x1b[15;8H\x1b[34mLower Screen: \x1b[0m%s", specs[2][model]);
+			
+			printf("\x1b[17;8H\x1b[34mGPU: \x1b[0mDMP PICA 268MHz");
+			
+			printf("\x1b[19;8H\x1b[34mARM9 CPU: \x1b[0mARM946 134MHz");
+			printf("\x1b[21;8H\x1b[34mARM11 CPU: \x1b[0m%s", specs[3][model]);
+			
+			printf("\x1b[23;8H\x1b[34mFC RAM: \x1b[0m%s", specs[4][model]);
+			
+			FSUSER_GetArchiveResource(&resource, SYSTEM_MEDIATYPE_SD);
+			printf("\x1b[25;8H\x1b[34mSD Space: \x1b[0m%.1fMB/%.1fMB",
+			(((u64) resource.freeClusters * (u64) resource.clusterSize) / 1024.0 / 1024.0),
+			(((u64) resource.totalClusters * (u64) resource.clusterSize) / 1024.0 / 1024.0));
+			
+			free(nver);
+			free(cver);
+			free(str_ver);
+			free(str_sysver);
+			
+			
+		
+			
+		}
+			
+		// Flush and swap framebuffers
+		gfxFlushBuffers();
+		gfxSwapBuffers();
+
+		gspWaitForVBlank();
+	}
+	gfxExit();
+	cfguExit();
+	amExit();
+	fsExit();
+	return 0;
 }
